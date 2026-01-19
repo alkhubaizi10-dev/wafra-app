@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, Component } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { Book, Wallet, TrendingUp, Plus, Flame, ChevronRight, ChevronLeft, Globe, Target, X, Sparkles, DollarSign, Coffee, Car, Home, ShoppingBag, Utensils, Smartphone, Heart, Plane, GraduationCap, Moon, Fuel, ShoppingCart, Wrench, Cookie, UtensilsCrossed, Trash2, ChevronDown, ChevronUp, Settings, Eye, EyeOff, Repeat, Palmtree, Building2, Edit3, Download, FileText, Sun, Calculator, AlertTriangle, Shield, Search, BarChart3, Tag, Briefcase, Gift, CreditCard, Banknote, Zap, Tv, ArrowDownCircle, ArrowUpCircle, CheckCircle, RotateCcw, FileSpreadsheet, MessageSquare, Calendar, Sliders, User, Info } from 'lucide-react';
+import { Wallet, TrendingUp, Plus, Flame, ChevronRight, ChevronLeft, Globe, Target, X, Sparkles, DollarSign, Coffee, Car, Home, ShoppingBag, Utensils, Heart, Plane, GraduationCap, Moon, Fuel, ShoppingCart, Wrench, Cookie, UtensilsCrossed, Trash2, ChevronDown, ChevronUp, Eye, EyeOff, Repeat, Palmtree, Building2, Edit3, Download, FileText, Sun, Calculator, AlertTriangle, Shield, Search, BarChart3, Tag, Briefcase, Gift, CreditCard, Banknote, Zap, Tv, ArrowDownCircle, ArrowUpCircle, CheckCircle, RotateCcw, FileSpreadsheet, MessageSquare, Calendar, Sliders, User, Info } from 'lucide-react';
 
 // Error Boundary for crash protection
 class ErrorBoundary extends Component {
@@ -169,7 +169,6 @@ function WafraApp() {
   const [deleting, setDeleting] = useState(null);
   const [editingTx, setEditingTx] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [newGoal, setNewGoal] = useState({ name: '', type: 'vacation', targetAmount: '', currentAmount: '0', deadline: '' });
   const [selectedGoal, setSelectedGoal] = useState(null);
@@ -188,7 +187,6 @@ function WafraApp() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [showQuickAddSettings, setShowQuickAddSettings] = useState(false);
-  const [editingCat, setEditingCat] = useState(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [editingBudget, setEditingBudget] = useState({ category: '', amount: '' });
 
@@ -199,14 +197,14 @@ function WafraApp() {
   const txt = dark ? 'text-white' : 'text-gray-800';
   const muted = dark ? 'text-gray-400' : 'text-gray-500';
 
-  const getCats = (type) => {
+  const getCats = useCallback((type) => {
     const base = type === 'income' ? incomeCategories[data.lang] : expenseCategories[data.lang];
     const custom = {};
     (data.customCategories || []).forEach(c => {
       if (c.type === 'both' || c.type === type) custom[c.id] = data.lang === 'ar' ? c.nameAr : c.name;
     });
     return { ...base, ...custom };
-  };
+  }, [data.lang, data.customCategories]);
 
   const allCats = useMemo(() => {
     const all = { ...expenseCategories[data.lang], ...incomeCategories[data.lang] };
@@ -254,8 +252,6 @@ function WafraApp() {
     return months;
   }, [data.transactions, data.lang]);
 
-  const goalsTotal = useMemo(() => data.goals.reduce((s, g) => s + (g.currentAmount || 0), 0), [data.goals]);
-
   const insights = useMemo(() => {
     const msgs = [];
     if (totalExpense > totalIncome && totalIncome > 0) msgs.push(data.lang === 'ar' ? '⚠️ مصروفاتك تتجاوز دخلك' : '⚠️ Spending exceeds income');
@@ -290,7 +286,7 @@ function WafraApp() {
   const addCatFn = () => { if (!newCategory.name || !newCategory.nameAr) return; setData(p => ({ ...p, customCategories: [...(p.customCategories || []), { ...newCategory, id: `c${Date.now()}` }] })); setNewCategory({ name: '', nameAr: '', color: '#10b981', icon: 'tag', type: 'expense' }); };
   const delCat = (id) => { setData(p => ({ ...p, customCategories: (p.customCategories || []).filter(c => c.id !== id) })); };
 
-  useEffect(() => { const cats = getCats(newTx.type); if (!Object.keys(cats).includes(newTx.category)) setNewTx(p => ({ ...p, category: Object.keys(cats)[0] || 'other' })); }, [newTx.type]);
+  useEffect(() => { const cats = getCats(newTx.type); if (!Object.keys(cats).includes(newTx.category)) setNewTx(p => ({ ...p, category: Object.keys(cats)[0] || 'other' })); }, [newTx.type, newTx.category, getCats]);
 
   // ONBOARDING - Now includes salary day (Step 3)
   if (!data.onboardingDone) {
@@ -513,7 +509,7 @@ function WafraApp() {
           <div className={`${card} rounded-2xl p-4 border`}><div className="flex items-center justify-between mb-3"><p className={`text-xs font-bold ${muted} uppercase`}>{t.quickAdd}</p><button onClick={() => setShowQuickAddSettings(true)} className="text-emerald-600"><Sliders size={16} /></button></div><div className="grid grid-cols-4 gap-3">{(data.quickAddCats || defaultQuickAddCats).map(catId => { const I = getIcon(catId); const colors = ['bg-amber-100 text-amber-600', 'bg-blue-100 text-blue-600', 'bg-emerald-100 text-emerald-600', 'bg-red-100 text-red-600']; return allCats[catId] ? <button key={catId} onClick={() => { setQuickCat(catId); setShowQuick(true); }} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${dark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}><div className={`p-2 rounded-full ${colors[(data.quickAddCats || defaultQuickAddCats).indexOf(catId) % 4]}`}><I size={18}/></div><span className={`text-[10px] font-bold ${muted}`}>{allCats[catId]}</span></button> : null; })}</div></div>
           
           <div><div className="flex justify-between items-center mb-3"><h3 className={`font-bold ${txt}`}>{t.yourGoals}</h3><button onClick={() => setTab('goals')} className="text-xs text-emerald-600 font-medium">{t.viewAll}</button></div>
-            {data.goals.length === 0 ? <button onClick={() => setShowAddGoal(true)} className={`w-full ${card} rounded-2xl p-6 border-2 border-dashed flex flex-col items-center gap-2`}><Plus size={24} className={muted} /><p className={`text-sm ${muted}`}>{t.noGoalsYet}</p></button> : <div className="flex gap-3 overflow-x-auto pb-2">{data.goals.slice(0, 3).map(g => { const gc = goalTypeColors[g.type] || goalTypeColors.other; const GI = goalTypeIcons[g.type] || Target; const prog = (g.currentAmount / g.targetAmount) * 100; const tl = timeLeft(g.deadline); return <button key={g.id} onClick={() => setSelectedGoal(g)} className={`${card} rounded-2xl p-4 min-w-[140px] flex-shrink-0 border text-left`}><div className={`w-10 h-10 rounded-xl ${gc.light} flex items-center justify-center mb-3`}><GI size={20} className={gc.text} /></div><p className={`font-bold text-sm ${txt} truncate`}>{g.name}</p><p className={`text-xs ${muted} mt-1`}>{fmtShort(g.currentAmount, data.privacyMode, data.homeCurrency)}</p><div className={`h-1.5 ${dark ? 'bg-gray-700' : 'bg-gray-100'} rounded-full overflow-hidden mt-2`}><div className={`h-full ${gc.bar} rounded-full`} style={{ width: `${Math.min(prog, 100)}%` }} /></div></button>; })}</div>}
+            {data.goals.length === 0 ? <button onClick={() => setShowAddGoal(true)} className={`w-full ${card} rounded-2xl p-6 border-2 border-dashed flex flex-col items-center gap-2`}><Plus size={24} className={muted} /><p className={`text-sm ${muted}`}>{t.noGoalsYet}</p></button> : <div className="flex gap-3 overflow-x-auto pb-2">{data.goals.slice(0, 3).map(g => { const gc = goalTypeColors[g.type] || goalTypeColors.other; const GI = goalTypeIcons[g.type] || Target; const prog = (g.currentAmount / g.targetAmount) * 100; return <button key={g.id} onClick={() => setSelectedGoal(g)} className={`${card} rounded-2xl p-4 min-w-[140px] flex-shrink-0 border text-left`}><div className={`w-10 h-10 rounded-xl ${gc.light} flex items-center justify-center mb-3`}><GI size={20} className={gc.text} /></div><p className={`font-bold text-sm ${txt} truncate`}>{g.name}</p><p className={`text-xs ${muted} mt-1`}>{fmtShort(g.currentAmount, data.privacyMode, data.homeCurrency)}</p><div className={`h-1.5 ${dark ? 'bg-gray-700' : 'bg-gray-100'} rounded-full overflow-hidden mt-2`}><div className={`h-full ${gc.bar} rounded-full`} style={{ width: `${Math.min(prog, 100)}%` }} /></div></button>; })}</div>}
           </div>
           
           <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-5 text-white"><button onClick={() => setExpandedInsights(!expandedInsights)} className="w-full flex items-center justify-between"><div className="flex items-center gap-2"><Sparkles size={20} className="text-yellow-300" /><h3 className="font-bold">{t.aiInsights}</h3></div>{expandedInsights ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}</button><div className={`space-y-2 overflow-hidden transition-all ${expandedInsights ? 'max-h-40 mt-3' : 'max-h-10 mt-2'}`}>{insights.map((ins, i) => <p key={i} className="text-indigo-100 text-sm">{ins}</p>)}</div></div>
@@ -571,7 +567,7 @@ function WafraApp() {
 
         {tab === 'goals' && (<div className="space-y-6">
           <div className="flex justify-between items-center"><h3 className={`font-bold text-2xl ${txt}`}>{t.goals}</h3><button onClick={() => setShowAddGoal(true)} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2"><Plus size={18} />{t.addGoal}</button></div>
-          {data.goals.length === 0 ? <button onClick={() => setShowAddGoal(true)} className={`w-full ${dark ? 'bg-emerald-900/20' : 'bg-emerald-50'} border-2 border-dashed border-emerald-300 rounded-2xl p-8 flex flex-col items-center gap-3`}><Target size={32} className="text-emerald-600" /><p className="text-emerald-700 font-medium">{t.noGoalsYet}</p></button> : <div className="space-y-4">{data.goals.map(g => { const gc = goalTypeColors[g.type] || goalTypeColors.other; const GI = goalTypeIcons[g.type] || Target; const prog = (g.currentAmount / g.targetAmount) * 100; const tl = timeLeft(g.deadline); return <button key={g.id} onClick={() => setSelectedGoal(g)} className={`w-full ${card} rounded-2xl p-5 border text-left`}><div className="flex items-center justify-between mb-4"><div className="flex items-center gap-3"><div className={`w-12 h-12 rounded-xl ${gc.light} flex items-center justify-center`}><GI size={24} className={gc.text} /></div><span className={`font-bold text-lg ${txt}`}>{g.name}</span></div><ChevronRight size={20} className={muted} /></div><div className="flex justify-between text-sm mb-2"><span className={`font-bold ${txt}`}>{fmtShort(g.currentAmount, data.privacyMode, data.homeCurrency)}</span><span className={muted}>{fmtShort(g.targetAmount, data.privacyMode, data.homeCurrency)}</span></div><div className={`h-2.5 ${dark ? 'bg-gray-700' : 'bg-gray-100'} rounded-full overflow-hidden mb-3`}><div className={`h-full ${gc.bar} rounded-full`} style={{ width: `${Math.min(prog, 100)}%` }} /></div></button>; })}</div>}
+          {data.goals.length === 0 ? <button onClick={() => setShowAddGoal(true)} className={`w-full ${dark ? 'bg-emerald-900/20' : 'bg-emerald-50'} border-2 border-dashed border-emerald-300 rounded-2xl p-8 flex flex-col items-center gap-3`}><Target size={32} className="text-emerald-600" /><p className="text-emerald-700 font-medium">{t.noGoalsYet}</p></button> : <div className="space-y-4">{data.goals.map(g => { const gc = goalTypeColors[g.type] || goalTypeColors.other; const GI = goalTypeIcons[g.type] || Target; const prog = (g.currentAmount / g.targetAmount) * 100; return <button key={g.id} onClick={() => setSelectedGoal(g)} className={`w-full ${card} rounded-2xl p-5 border text-left`}><div className="flex items-center justify-between mb-4"><div className="flex items-center gap-3"><div className={`w-12 h-12 rounded-xl ${gc.light} flex items-center justify-center`}><GI size={24} className={gc.text} /></div><span className={`font-bold text-lg ${txt}`}>{g.name}</span></div><ChevronRight size={20} className={muted} /></div><div className="flex justify-between text-sm mb-2"><span className={`font-bold ${txt}`}>{fmtShort(g.currentAmount, data.privacyMode, data.homeCurrency)}</span><span className={muted}>{fmtShort(g.targetAmount, data.privacyMode, data.homeCurrency)}</span></div><div className={`h-2.5 ${dark ? 'bg-gray-700' : 'bg-gray-100'} rounded-full overflow-hidden mb-3`}><div className={`h-full ${gc.bar} rounded-full`} style={{ width: `${Math.min(prog, 100)}%` }} /></div></button>; })}</div>}
         </div>)}
 
         {tab === 'profile' && (<div className="space-y-4">
