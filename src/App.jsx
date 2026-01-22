@@ -38,15 +38,23 @@ function useLocalStorage(key, initialValue) {
     }
   });
 
+  // Use ref to always have access to the latest value
+  const storedValueRef = useRef(storedValue);
+  useEffect(() => {
+    storedValueRef.current = storedValue;
+  }, [storedValue]);
+
   const setValue = useCallback((value) => {
     try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      // Use ref to get latest value when called with a function
+      const valueToStore = value instanceof Function ? value(storedValueRef.current) : value;
       setStoredValue(valueToStore);
+      storedValueRef.current = valueToStore;
       window.localStorage.setItem(key, JSON.stringify(valueToStore));
     } catch (error) {
       console.error('Error saving to localStorage:', error);
     }
-  }, [key, storedValue]);
+  }, [key]);
 
   return [storedValue, setValue];
 }
@@ -208,7 +216,7 @@ const GOAL_TEMPLATES = [
 ];
 
 const fmt = (amt, priv, curr = 'KD') => priv ? '****' : `${currencies[curr]?.symbol || 'KD'} ${parseFloat(amt || 0).toFixed(2)}`;
-const fmtShort = (amt, priv, curr = 'KD') => priv ? '****' : `${currencies[curr]?.symbol || 'KD'} ${parseFloat(amt || 0).toFixed(0)}`;
+const fmtShort = (amt, priv, curr = 'KD') => priv ? '****' : `${currencies[curr]?.symbol || 'KD'} ${parseFloat(amt || 0).toFixed(2)}`;
 
 // Haptic Feedback Utility - Makes the app feel native and premium
 const haptic = {
@@ -890,7 +898,7 @@ function WafraApp() {
   const addGoalFn = () => { 
     if (!newGoal.name || !newGoal.targetAmount) return; 
     haptic.medium(); 
-    setData(p => ({ ...p, goals: [...p.goals, { id: Date.now(), ...newGoal, targetAmount: parseFloat(newGoal.targetAmount), currentAmount: parseFloat(newGoal.currentAmount) || 0 }] })); 
+    setData(p => ({ ...p, goals: [...(p.goals || []), { id: Date.now(), ...newGoal, targetAmount: parseFloat(newGoal.targetAmount), currentAmount: parseFloat(newGoal.currentAmount) || 0 }] })); 
     setNewGoal({ name: '', type: 'vacation', targetAmount: '', currentAmount: '0', deadline: '' }); 
     setShowAddGoal(false);
     setShowGoalTemplates(true);
@@ -1354,7 +1362,7 @@ function WafraApp() {
             <p className="text-emerald-100 text-sm">{t.welcomeBack}, {data.profile.name} 👋</p>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-white/70 text-xs">{currentLevel.icon} {t.level} {currentLevel.level}</span>
-              <span className="text-white/50 text-xs">• v8.3 BETA</span>
+              <span className="text-white/50 text-xs">• v8.5 BETA</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1433,8 +1441,9 @@ function WafraApp() {
 
         {/* Goals: Total Saved */}
         {tab === 'goals' && (() => {
-          const totalSaved = data.goals.reduce((sum, g) => sum + (g.currentAmount || 0), 0);
-          const totalTarget = data.goals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
+          const goals = data.goals || [];
+          const totalSaved = goals.reduce((sum, g) => sum + (g.currentAmount || 0), 0);
+          const totalTarget = goals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
           const overallProgress = totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0;
           return (<>
             <div className="flex items-center justify-between">
@@ -1442,7 +1451,7 @@ function WafraApp() {
                 <p className={`text-xs font-bold ${muted} uppercase`}>{data.lang === 'ar' ? 'إجمالي المدخرات' : 'Total Saved'}</p>
                 <h2 className="text-4xl font-bold mt-2 text-emerald-600">{fmt(totalSaved, data.privacyMode, data.homeCurrency)}</h2>
               </div>
-              {data.goals.length > 0 && (
+              {goals.length > 0 && (
                 <div className="text-right">
                   <p className={`text-xs ${muted}`}>{data.lang === 'ar' ? 'التقدم الكلي' : 'Overall'}</p>
                   <p className="text-2xl font-bold text-emerald-600">{overallProgress}%</p>
@@ -1465,7 +1474,7 @@ function WafraApp() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-400">{data.lang === 'ar' ? 'عدد الأهداف' : 'Goals'}</p>
-                  <p className="font-bold text-blue-600">{data.goals.length}</p>
+                  <p className="font-bold text-blue-600">{goals.length}</p>
                 </div>
               </div>
             </div>
@@ -1610,7 +1619,7 @@ function WafraApp() {
           </div>
           
           <div><div className="flex justify-between items-center mb-3"><h3 className={`font-bold ${txt}`}>{t.yourGoals}</h3><button onClick={() => setTab('goals')} className="text-xs text-emerald-600 font-medium">{t.viewAll}</button></div>
-            {data.goals.length === 0 ? <button onClick={() => setShowAddGoal(true)} className={`w-full ${card} rounded-2xl p-6 border-2 border-dashed flex flex-col items-center gap-2`}><Plus size={24} className={muted} /><p className={`text-sm ${muted}`}>{t.noGoalsYet}</p></button> : <div className="flex gap-3 overflow-x-auto pb-2">{data.goals.slice(0, 3).map(g => { const gc = goalTypeColors[g.type] || goalTypeColors.other; const GI = goalTypeIcons[g.type] || Target; const prog = (g.currentAmount / g.targetAmount) * 100; return <button key={g.id} onClick={() => setSelectedGoal(g)} className={`${card} rounded-2xl p-4 min-w-[140px] flex-shrink-0 border text-left`}><div className={`w-10 h-10 rounded-xl ${gc.light} flex items-center justify-center mb-3`}><GI size={20} className={gc.text} /></div><p className={`font-bold text-sm ${txt} truncate`}>{g.name}</p><p className={`text-xs ${muted} mt-1`}>{fmtShort(g.currentAmount, data.privacyMode, data.homeCurrency)}</p><div className={`h-1.5 ${dark ? 'bg-gray-700' : 'bg-gray-100'} rounded-full overflow-hidden mt-2`}><div className={`h-full ${gc.bar} rounded-full`} style={{ width: `${Math.min(prog, 100)}%` }} /></div></button>; })}</div>}
+            {(data.goals || []).length === 0 ? <button onClick={() => setShowAddGoal(true)} className={`w-full ${card} rounded-2xl p-6 border-2 border-dashed flex flex-col items-center gap-2`}><Plus size={24} className={muted} /><p className={`text-sm ${muted}`}>{t.noGoalsYet}</p></button> : <div className="flex gap-3 overflow-x-auto pb-2">{(data.goals || []).slice(0, 3).map(g => { const gc = goalTypeColors[g.type] || goalTypeColors.other; const GI = goalTypeIcons[g.type] || Target; const prog = (g.currentAmount / g.targetAmount) * 100; return <button key={g.id} onClick={() => setSelectedGoal(g)} className={`${card} rounded-2xl p-4 min-w-[140px] flex-shrink-0 border text-left`}><div className={`w-10 h-10 rounded-xl ${gc.light} flex items-center justify-center mb-3`}><GI size={20} className={gc.text} /></div><p className={`font-bold text-sm ${txt} truncate`}>{g.name}</p><p className={`text-xs ${muted} mt-1`}>{fmtShort(g.currentAmount, data.privacyMode, data.homeCurrency)}</p><div className={`h-1.5 ${dark ? 'bg-gray-700' : 'bg-gray-100'} rounded-full overflow-hidden mt-2`}><div className={`h-full ${gc.bar} rounded-full`} style={{ width: `${Math.min(prog, 100)}%` }} /></div></button>; })}</div>}
           </div>
           
           <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-5 text-white"><button onClick={() => setExpandedInsights(!expandedInsights)} className="w-full flex items-center justify-between"><div className="flex items-center gap-2"><Sparkles size={20} className="text-yellow-300" /><h3 className="font-bold">{t.aiInsights}</h3></div>{expandedInsights ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}</button><div className={`space-y-2 overflow-hidden transition-all ${expandedInsights ? 'max-h-40 mt-3' : 'max-h-10 mt-2'}`}>{insights.map((ins, i) => <p key={i} className="text-indigo-100 text-sm">{ins}</p>)}</div></div>
@@ -1687,7 +1696,7 @@ function WafraApp() {
 
         {tab === 'goals' && (<div className="space-y-6">
           <div className="flex justify-between items-center"><h3 className={`font-bold text-2xl ${txt}`}>{t.goals}</h3><button onClick={() => setShowAddGoal(true)} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2"><Plus size={18} />{t.addGoal}</button></div>
-          {data.goals.length === 0 ? <button onClick={() => setShowAddGoal(true)} className={`w-full ${dark ? 'bg-emerald-900/20' : 'bg-emerald-50'} border-2 border-dashed border-emerald-300 rounded-2xl p-8 flex flex-col items-center gap-3`}><Target size={32} className="text-emerald-600" /><p className="text-emerald-700 font-medium">{t.noGoalsYet}</p></button> : <div className="space-y-4">{data.goals.map(g => { const gc = goalTypeColors[g.type] || goalTypeColors.other; const GI = goalTypeIcons[g.type] || Target; const prog = (g.currentAmount / g.targetAmount) * 100; return <button key={g.id} onClick={() => setSelectedGoal(g)} className={`w-full ${card} rounded-2xl p-5 border text-left`}><div className="flex items-center justify-between mb-4"><div className="flex items-center gap-3"><div className={`w-12 h-12 rounded-xl ${gc.light} flex items-center justify-center`}><GI size={24} className={gc.text} /></div><span className={`font-bold text-lg ${txt}`}>{g.name}</span></div><ChevronRight size={20} className={muted} /></div><div className="flex justify-between text-sm mb-2"><span className={`font-bold ${txt}`}>{fmtShort(g.currentAmount, data.privacyMode, data.homeCurrency)}</span><span className={muted}>{fmtShort(g.targetAmount, data.privacyMode, data.homeCurrency)}</span></div><div className={`h-2.5 ${dark ? 'bg-gray-700' : 'bg-gray-100'} rounded-full overflow-hidden mb-3`}><div className={`h-full ${gc.bar} rounded-full`} style={{ width: `${Math.min(prog, 100)}%` }} /></div></button>; })}</div>}
+          {(data.goals || []).length === 0 ? <button onClick={() => setShowAddGoal(true)} className={`w-full ${dark ? 'bg-emerald-900/20' : 'bg-emerald-50'} border-2 border-dashed border-emerald-300 rounded-2xl p-8 flex flex-col items-center gap-3`}><Target size={32} className="text-emerald-600" /><p className="text-emerald-700 font-medium">{t.noGoalsYet}</p></button> : <div className="space-y-4">{(data.goals || []).map(g => { const gc = goalTypeColors[g.type] || goalTypeColors.other; const GI = goalTypeIcons[g.type] || Target; const prog = (g.currentAmount / g.targetAmount) * 100; return <button key={g.id} onClick={() => setSelectedGoal(g)} className={`w-full ${card} rounded-2xl p-5 border text-left`}><div className="flex items-center justify-between mb-4"><div className="flex items-center gap-3"><div className={`w-12 h-12 rounded-xl ${gc.light} flex items-center justify-center`}><GI size={24} className={gc.text} /></div><span className={`font-bold text-lg ${txt}`}>{g.name}</span></div><ChevronRight size={20} className={muted} /></div><div className="flex justify-between text-sm mb-2"><span className={`font-bold ${txt}`}>{fmtShort(g.currentAmount, data.privacyMode, data.homeCurrency)}</span><span className={muted}>{fmtShort(g.targetAmount, data.privacyMode, data.homeCurrency)}</span></div><div className={`h-2.5 ${dark ? 'bg-gray-700' : 'bg-gray-100'} rounded-full overflow-hidden mb-3`}><div className={`h-full ${gc.bar} rounded-full`} style={{ width: `${Math.min(prog, 100)}%` }} /></div></button>; })}</div>}
         </div>)}
 
         {tab === 'profile' && (<div className="space-y-4">
@@ -1903,7 +1912,7 @@ function WafraApp() {
             
             {/* Category Pills - Scrollable */}
             <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-2 px-2">
-              {Object.entries(getCats(newTx.type)).slice(0, 8).map(([k, v]) => {
+              {Object.entries(getCats(newTx.type)).map(([k, v]) => {
                 const IC = getIcon(k);
                 const isSelected = newTx.category === k;
                 return (
@@ -2194,7 +2203,7 @@ function WafraApp() {
         
         {/* List all categories with budgets */}
         <div className="space-y-3">
-          {Object.keys(expenseCategories[data.lang]).map(catKey => {
+          {Object.keys(getCats('expense')).map(catKey => {
             const catName = allCats[catKey];
             const limit = data.budgets?.[catKey] || 0;
             const spent = catSpending[catKey] || 0;
