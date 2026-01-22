@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, Component } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { Wallet, TrendingUp, Plus, Flame, ChevronRight, ChevronLeft, Globe, Target, X, Sparkles, DollarSign, Coffee, Car, Home, ShoppingBag, Utensils, Heart, Plane, GraduationCap, Moon, Fuel, ShoppingCart, Wrench, Cookie, UtensilsCrossed, Trash2, ChevronDown, ChevronUp, Eye, EyeOff, Repeat, Palmtree, Building2, Edit3, Download, FileText, Sun, Calculator, AlertTriangle, Shield, Search, BarChart3, Tag, Briefcase, Gift, CreditCard, Banknote, Zap, Tv, ArrowDownCircle, ArrowUpCircle, CheckCircle, RotateCcw, FileSpreadsheet, MessageSquare, Calendar, Sliders, User, Info, Delete, TrendingDown, PiggyBank, Mic, MicOff, Clock, Award, Star, Trophy, Coins, Bell, Play, Lightbulb, Volume2, Timer, Crown, Gem, Lock, Unlock } from 'lucide-react';
+import { Wallet, TrendingUp, Plus, Flame, ChevronRight, ChevronLeft, Globe, Target, X, Sparkles, DollarSign, Coffee, Car, Home, ShoppingBag, Utensils, Heart, Plane, GraduationCap, Moon, Fuel, ShoppingCart, Wrench, Cookie, UtensilsCrossed, Trash2, ChevronDown, ChevronUp, Eye, EyeOff, Repeat, Palmtree, Building2, Edit3, Download, FileText, Sun, Calculator, AlertTriangle, Shield, Search, BarChart3, Tag, Briefcase, Gift, CreditCard, Banknote, Zap, Tv, ArrowDownCircle, ArrowUpCircle, CheckCircle, RotateCcw, FileSpreadsheet, MessageSquare, Calendar, Sliders, User, Info, Delete, TrendingDown, PiggyBank, Star, Trophy, Coins, Lightbulb } from 'lucide-react';
 
 // Error Boundary for crash protection
 class ErrorBoundary extends Component {
@@ -539,7 +539,7 @@ const MonthlyReportCard = ({ data, t, dark, onClose }) => {
           <p className="text-indigo-200 text-sm mb-1">{lastMonth.toLocaleDateString(data.lang === 'ar' ? 'ar' : 'en', { month: 'long', year: 'numeric' })}</p>
           <h2 className="text-2xl font-bold mb-4">{t.monthlyReport}</h2>
           <div className="text-7xl mb-2">{gradeEmoji}</div>
-          <p className={`text-5xl font-black`}>{grade}</p>
+          <p className={`text-5xl font-black ${gradeColor}`}>{grade}</p>
         </div>
         
         <div className="p-6 space-y-4">
@@ -668,7 +668,6 @@ function WafraApp() {
   const [showMonthlyReport, setShowMonthlyReport] = useState(false);
   const [showAchievementUnlock, setShowAchievementUnlock] = useState(null);
   const [showGoalTemplates, setShowGoalTemplates] = useState(true);
-  const [isListening, setIsListening] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [quickBudgetImpact, setQuickBudgetImpact] = useState(null);
 
